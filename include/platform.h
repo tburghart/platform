@@ -288,7 +288,7 @@
 #define PLATFORM_UNIX       1
 #if     defined(__SVR4) || defined(__svr4__)
 #define PLATFORM_SOLARIS    1
-#define PLATFORM_OS_NAME    "Splaris"
+#define PLATFORM_OS_NAME    "Solaris"
 #define PLATFORM_SVR4       1
 #else
 #define PLATFORM_OS_NAME    "SunOS"

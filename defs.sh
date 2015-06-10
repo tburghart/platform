@@ -1,4 +1,4 @@
-#!/bin/ksh -e
+#!/bin/sh -e -x
 
 cd "$(dirname "$0")"
 
@@ -6,10 +6,18 @@ readonly  sysarch="$(uname -m | tr '[A-Z]' '[a-z]')"
 readonly  systype="$(uname -s | tr '[A-Z]' '[a-z]')"
 readonly  sysvers="$(uname -r | tr '[A-Z]' '[a-z]')"
 
-readonly  outbase="gen/$systype.$sysvers.$sysarch"
+readonly  outbase="$systype-$sysvers-$sysarch"
 
-[[ -d 'gen' ]] || mkdir 'gen'
-printf 'int main(void)\n{\n\treturn 0;\n}\n' > 'gen/simple.c'
+for d in gen scratch
+do
+    [[ -d "$d" ]] || mkdir "$d"
+done
+cat >'scratch/simple.c' <<EOF
+int main(void)
+{
+    return 0;
+}
+EOF
 
 for c in "$@" cc gcc icc
 do
@@ -18,7 +26,7 @@ do
 
     # if it's not GCC-ish don't know how to get the predefs
     pd='-E -dM -nostdinc'
-    $CC $pd -o /dev/null 'gen/simple.c' 1>/dev/null 2>&1 || continue
+    $CC $pd -o /dev/null 'scratch/simple.c' 1>/dev/null 2>&1 || continue
 
     for mm in '' 32 64
     do
@@ -36,10 +44,13 @@ do
                 cf+=" -std=$std"
                 of+=".$std"
             fi
-            if $CC $cf -o /dev/null 'gen/simple.c' 1>/dev/null 2>&1
+            if $CC $cf -o /dev/null 'scratch/simple.c' 1>/dev/null 2>&1
             then
-                printf '' | $CC $cf -o "$of.predef.c" -
-                cat 'platform.h' | $CC $cf -o "$of.platform.c" -
+                printf '' | $CC $cf -o "scratch/$of.compiler.c" -
+                cat 'platform.h' | $CC $cf -o "scratch/$of.platform.c" -
+                diff "scratch/$of.compiler.c" "scratch/$of.platform.c" \
+                    | grep '^> ' | grep -v '_platform_h_incl' \
+                    | cut -c3- > "gen/$of.platform_defs.h"
             fi
         done
     done
